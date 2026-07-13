@@ -457,6 +457,8 @@ YYYY-MM-DD_Company_Job-Title_Req-ID_George-Dawson_Resume.docx  (only if supporte
 YYYY-MM-DD_Company_Job-Title_Req-ID_George-Dawson_Cover-Letter.md
 YYYY-MM-DD_Company_Job-Title_Req-ID_George-Dawson_Cover-Letter.pdf
 YYYY-MM-DD_Company_Job-Title_Req-ID_George-Dawson_Cover-Letter.docx  (only if supported)
+YYYY-MM-DD_Company_Job-Title_Req-ID_Job-Description.md
+YYYY-MM-DD_Company_Job-Title_Req-ID_Job-Description.pdf
 YYYY-MM-DD_Company_Job-Title_Req-ID_Evaluation.md  (reference to the canonical report)
 application-answers.md
 manifest.md
@@ -511,6 +513,55 @@ and enabled DOCX exporter. Generate DOCX only when one exists; otherwise state
 `DOCX unavailable; PDF generation was not blocked.` Never rename HTML, Markdown,
 or PDF to create a fake DOCX.
 
+**PDF-first DOCX policy:** PDF is always the preferred final application resume
+and cover letter. Render and validate PDFs independently before attempting any
+DOCX export. DOCX is a secondary editable/downloadable copy; its failure never
+blocks a valid PDF package. The approved `docx` exporter supports resumes only.
+When enabled, create the resume DOCX from the approved package Markdown source
+with its documented direct command:
+`node plugins.local/docx/bin/generate-docx.mjs <resume.md> <resume.docx> --format=letter`.
+Then run `node .opencode/helpers/audit-package.mjs --validate-docx --resume
+<resume.md> --docx <resume.docx>`. A DOCX must be genuine Word OOXML and retain
+the approved candidate/contact, certifications, education, employers, titles,
+dates, and material source bullets. Do not create a cover-letter DOCX: record
+`UNSUPPORTED` and retain its PDF plus Markdown/HTML editable source. If a later
+approved exporter documents cover-letter support, generate that DOCX only after
+its PDF and source audit pass.
+
+Before releasing either format, candidate/contact, certification, education,
+employment, employer/role/title/date, chronology, engagement structure,
+conflation, relevance, unsupported-claim, and applicable cover-letter-source
+audits must all be PASS. Keep PDF first in the manifest and final review.
+
+**Archived job-description package requirement:** Every approved package must
+include a full Job Description PDF and an exact package Markdown copy. The
+canonical `data/job-descriptions/*.md` archive is the sole source for both:
+never scrape or revisit the live posting merely to generate the PDF, never
+summarize or alter the source, and never change the canonical archive while
+creating package material. Run:
+`node .opencode/helpers/audit-package.mjs --create-jd-pdf --jd
+<archived-jd-path> --package <package-folder> --date YYYY-MM-DD`.
+
+The helper copies the archive byte-for-byte into the package and renders only
+that archive as a Letter-size, selectable/searchable-text PDF with metadata,
+the complete source-backed description, clickable canonical URL, and page
+numbers. It names the package files
+`YYYY-MM-DD_Company_Job-Title_Req-ID_Job-Description.{md,pdf}` with Windows-safe
+components. The date is the package-generation date; company, title, and
+requisition ID must match the archive. It reuses an unchanged archive version;
+when an approved archive revision differs for the same requisition, it creates
+`_v2`, `_v3`, and so on without overwriting the prior pair.
+
+Before release, confirm the canonical archive, package Markdown copy, and PDF
+exist; canonical and package Markdown SHA-256 checksums match; the PDF opens,
+contains the complete archived description as selectable/searchable text; and
+company, title, and requisition match. A checksum mismatch blocks release.
+Pass the JD Markdown/PDF paths, version, and PASS results to `--create-manifest`.
+The manifest must record canonical and package paths, both SHA-256 values,
+checksum result, PDF result, posting status at capture, and last-verified date.
+Update the canonical report and existing tracker note with the archive, package
+Markdown, package PDF, and checksum result without changing application status.
+
 **Cover letter and answers:** Generate a concise, job-specific cover letter
 after resume approval unless the employer expressly declines it, there is no
 cover-letter option and no practical benefit, or the user says not to. Use the
@@ -532,8 +583,10 @@ generation timestamp, `cv.md` SHA-256, all generated files, certification and
 education reconciliation, cover-letter source audit, employment reconciliation,
 all source employers and roles represented, employer/title/date integrity,
 chronology integrity, engagement-structure integrity, no employer or
-responsibility conflation, relevant-experience appreciation, status, approval, and
-`Application submitted: No`.
+responsibility conflation, relevant-experience appreciation, preferred PDF
+filenames, editable DOCX/source filenames, PDF export result, DOCX export
+result (`PASS`, `FAILED`, or `UNSUPPORTED`), status, approval, and
+`No application submitted: Yes`.
 
 Create the dated evaluation-reference file in the package linking to, rather
 than duplicating or renaming, the canonical evaluation report. Update that
@@ -544,6 +597,60 @@ existing tracker row through `node set-status.mjs <report#> Evaluated --note
 <file-or-unavailable>; Cover letter: <file>; JD: <path>; Generated:
 YYYY-MM-DD"`. This preserves its current `Evaluated` status and never marks it
 Applied. Do not create a duplicate tracker row.
+
+**Application Package Lifecycle:** After `--create-manifest` succeeds, complete
+the package only through the shared user-owned helper:
+`node .opencode/helpers/audit-package.mjs --complete-lifecycle --package
+<package-folder> --jd <archived-jd-path> --report <canonical-report-path>
+--resume-pdf <file> --resume-source <file> --cover-pdf <file> --jd-pdf <file>
+--jd-package-md <file> --evaluation-reference <file> --answers <file>
+--tracker-status <current-status> [--resume-docx <file>] [--cover-docx <file>]`.
+It creates or refreshes package-local `Application-Intelligence.md`,
+`Evaluation.md`, `ATS-Answers.md`, `NEXT-STEPS.md`, `CONTENTS.md`, and
+`timeline.md`, plus a blank `Interview/` workspace containing Interview Notes,
+STAR Stories, Company Research, Recruiter Notes, Questions Asked, Salary
+Negotiation, Offer Notes, and Follow-Up files. It appends initial source-backed
+timeline events with date, time, actor, and source, then appends Package Health
+to the manifest. It must validate all package materials and health checks before
+opening Explorer or copying the canonical application URL to the Windows
+clipboard. If clipboard access is unavailable, display the canonical URL.
+
+For later milestones, use the same helper only:
+`node .opencode/helpers/audit-package.mjs --append-timeline --package
+<package-folder> --event "Interview scheduled" --actor "Candidate" --source
+"Manual confirmation"`. Never infer a submission or alter status from a
+timeline event. After manual submission is explicitly confirmed, the user may
+run `/audit-status applied` or `/audit-update-status applied`; only that separate
+confirmed action may update the tracker.
+
+**Application Package Versioning:** Every package must contain `versions.md`.
+After the lifecycle helper completes an initial package, call the same helper's
+`--version-package` action with the package, archived JD, fit score, current
+tracker status, resume and cover-letter source, intelligence report, ATS answers,
+and all rendered material filenames. It creates v1 with the reason `Initial
+approved application package`, source checksums, generated file list, status,
+submission state, and initial-change summary. It records current/previous version,
+reason, all six substantive checksums, and material-change result in the manifest.
+
+Before any later material regeneration, compare the resume source, cover-letter
+source, archived JD, intelligence report, ATS answers, and `cv.md` checksums
+through `--version-package`. If unchanged, retain the existing version and report
+`No material change; existing version retained.` Non-material folder opens,
+timeline or interview notes, link fixes, and identical renders never create a
+version. A material revision requires this exact question before creating any
+v2+ files: `A material application-package revision has been identified. Create
+version vN? Reply APPROVE, REVISE, SKIP, or STOP.` Only `APPROVE` permits new
+versioned files and registration. Give `--reason` and `--change-summary` with
+the exact changes. Use `_v2`, `_v3`, and so on for all v2+ PDFs/DOCX files; never
+overwrite a released file.
+
+When a submitted package is revised, retain the submitted version separately,
+state that it was submitted, and do not alter tracker submitted-file references
+without separate explicit confirmation. After registering a version, update the
+canonical evaluation report and existing tracker note with current version,
+current resume/cover filenames, `versions.md`, revision timestamp, and reason
+using `node set-status.mjs <report#> <unchanged-state> --note ...`; this must not
+change status.
 
 **Final quality gate and response:** Before presenting files, verify the
 candidate name/contact information, employment titles/dates, all certification
