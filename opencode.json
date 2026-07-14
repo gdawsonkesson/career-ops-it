@@ -1,6 +1,5 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "env": ".env",
   "mcp": {
     "playwright": {
       "type": "local",
